@@ -159,6 +159,8 @@ class EmailRepository extends CommonRepository
         $countWithMaxMin = false,
         $maxDate = null
     ) {
+        $q = $this->getEntityManager()->getConnection()->createQueryBuilder();
+
         // Do not include leads in the do not contact table
         $dncQb = $this->getEntityManager()->getConnection()->createQueryBuilder();
         $dncQb->select('dnc.lead_id')
@@ -187,11 +189,23 @@ class EmailRepository extends CommonRepository
             if (!in_array($emailId, $variantIds)) {
                 $variantIds[] = (string) $emailId;
             }
-            $statQb->andWhere($statQb->expr()->in('stat.email_id', $variantIds));
-            $mqQb->andWhere($mqQb->expr()->in('mq.channel_id', $variantIds));
+            $statExpr = $q->expr()->and(
+                $statExpr,
+                $q->expr()->in('stat.email_id', $variantIds)
+            );
+            $mqExpr = $q->expr()->and(
+                $mqExpr,
+                $q->expr()->in('mq.channel_id', $variantIds)
+            );
         } else {
-            $statQb->andWhere($statQb->expr()->eq('stat.email_id', (int) $emailId));
-            $mqQb->andWhere($mqQb->expr()->eq('mq.channel_id', (int) $emailId));
+            $statExpr = $q->expr()->and(
+                $statExpr,
+                $q->expr()->eq('stat.email_id', (int) $emailId)
+            );
+            $mqExpr = $q->expr()->and(
+                $mqExpr,
+                $q->expr()->eq('mq.channel_id', (int) $emailId)
+            );
         }
 
         // Only include those who belong to the associated lead lists
@@ -231,14 +245,13 @@ class EmailRepository extends CommonRepository
         }
 
         // Main query
-        $q = $this->getEntityManager()->getConnection()->createQueryBuilder();
         if ($countOnly) {
-            $q->select('count(*) as count');
+            $q->select('count(distinct ll.lead_id) as count');
             if ($countWithMaxMin) {
-                $q->addSelect('MIN(l.id) as min_id, MAX(l.id) as max_id');
+                $q->addSelect('MIN(ll.lead_id) as min_id, MAX(ll.lead_id) as max_id');
             }
         } else {
-            $q->select('l.*');
+            $q->select('distinct l.*');
         }
 
         $q->from(MAUTIC_TABLE_PREFIX.'leads', 'l')
@@ -255,11 +268,10 @@ class EmailRepository extends CommonRepository
         $q = $this->setMinMaxIds($q, 'l.id', $minContactId, $maxContactId);
 
         // Has an email
-        $q->andWhere(
-            $q->expr()->andX(
-                $q->expr()->isNotNull('l.email'),
-                $q->expr()->neq('l.email', $q->expr()->literal(''))
-            )
+        $leadExpr = $q->expr()->and(
+            $q->expr()->eq('l.id', 'll.lead_id'),
+            $q->expr()->isNotNull('l.email'),
+            $q->expr()->neq('l.email', $q->expr()->literal(''))
         );
 
         if (!empty($limit)) {
