@@ -1525,6 +1525,10 @@ class EmailController extends FormController
      */
     public function contactsAction($objectId, $page = 1)
     {
+        /** @var \Mautic\EmailBundle\Entity\EmailRepository $repo */
+        $repo  = $this->getModel('email')->getRepository();
+        $count = $repo->getEmailContactsCount($objectId);
+
         return $this->generateContactsGrid(
             $objectId,
             $page,
@@ -1532,7 +1536,15 @@ class EmailController extends FormController
             'email',
             'email_stats',
             'email',
-            'email_id'
+            'email_id',
+            null,
+            null,
+            null,
+            [],
+            null,
+            'entity.lead_id',
+            null,
+            $count
         );
     }
 
