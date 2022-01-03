@@ -24,6 +24,19 @@ use Mautic\LeadBundle\Entity\DoNotContact;
  */
 class EmailRepository extends CommonRepository
 {
+    public function getEmailContactsCount($email_id)
+    {
+        $statQb = $this->getEntityManager()->getConnection()->createQueryBuilder();
+        $statQb->select('count(*) as count')
+            ->from(MAUTIC_TABLE_PREFIX.'email_stats', 'stat')
+            ->where($statQb->expr()->eq('stat.email_id', $email_id))
+            ->andWhere($statQb->expr()->isNotNull('stat.lead_id'));
+
+        $result = $statQb->execute()->fetchOne();
+
+        return $result;
+    }
+
     /**
      * Get an array of do not email emails.
      *
