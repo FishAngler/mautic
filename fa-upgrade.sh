@@ -1,7 +1,7 @@
 #!/bin/bash
-FULL_PATH_TO_SCRIPT=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
-cd $FULL_PATH_TO_SCRIPT
-git pull origin FishAngler
+mkdir -p ../backup
+zip -qr ../backup/mautic_install_$(date +%FT%T).zip *
+curl -o mautic.zip -SL https://github.com/FishAngler/mautic/releases/download/FishAngler/FishAngler.zip && unzip -oq mautic.zip -d . && rm mautic.zip 
 php bin/console doctrine:migrations:migrate
 php bin/console cache:clear
 chown -R www-data *
