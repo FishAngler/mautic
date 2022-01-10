@@ -1,0 +1,64 @@
+name: fa-release
+on:
+  push:
+    tags:
+      - '*'
+jobs:
+  release:
+    name: Create draft release
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      # Our build script needs access to all previous tags, so we add fetch-depth: 0
+      with:
+        fetch-depth: 0
+    
+    - name: Setup PHP, with composer and extensions
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: 7.4
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, mysql, pdo_mysql
+
+    - name: Get tag name
+      run: echo "MAUTIC_VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
+
+    - name: Install dependencies
+      run: |
+        composer validate
+        composer install --prefer-dist --no-progress --no-suggest
+
+    - name: Build release files
+      run: |
+        php build/package_release.php -b=${{ env.MAUTIC_VERSION }}
+        echo 'MAUTIC_SHA1_CONTENTS<<EOF' >> $GITHUB_ENV
+        cat build/packages/build-sha1-all >> $GITHUB_ENV
+        echo 'EOF' >> $GITHUB_ENV
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.MAUTIC_VERSION }}
+        release_name: Mautic ${{ env.MAUTIC_VERSION }}
+        draft: false
+        prerelease: false
+        body: |
+          ${{ env.MAUTIC_SHA1_CONTENTS }}
+
+    - name: Upload full package ${{ env.MAUTIC_VERSION }}.zip
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./build/packages/${{ env.MAUTIC_VERSION }}.zip
+        asset_name: ${{ env.MAUTIC_VERSION }}.zip
+        asset_content_type: application/zip
+
+    - name: Store full package artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ env.MAUTIC_VERSION }}.zip
+        path: ./build/packages/${{ env.MAUTIC_VERSION }}.zip
