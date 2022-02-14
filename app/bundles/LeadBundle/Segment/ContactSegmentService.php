@@ -132,7 +132,7 @@ class ContactSegmentService
 
         // Prepend the DISTINCT to the beginning of the select array
         $select = $queryBuilder->getQueryPart('select');
-        array_unshift($select, 'DISTINCT l.*');
+        array_unshift($select, 'DISTINCT l.id');
         $queryBuilder->setQueryPart('select', $select);
 
         $this->logger->debug('Segment QB: Create Leads SQL: '.$queryBuilder->getDebugOutput(), ['segmentId' => $segment->getId()]);
