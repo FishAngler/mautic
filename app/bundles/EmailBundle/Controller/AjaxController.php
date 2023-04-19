@@ -298,7 +298,7 @@ class AjaxController extends CommonAjaxController
         $data = [];
         foreach ($ids as $id) {
             if ($email = $model->getEntity($id)) {
-                $pending = $model->getPendingLeads($email, null, true);
+                $pending = 0; // $model->getPendingLeads($email, null, true);
                 $queued  = $model->getQueuedCounts($email);
 
                 $data[] = [
